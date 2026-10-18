@@ -2,7 +2,7 @@
 
 A hands-on project to model, configure and integrate a real laboratory workflow in an Electronic Lab Notebook (ELN), from requirements to data integration.
 
-**Status:** 🚧 In progress (started October 2026)
+**Status:**  In progress (started October 2026)
 **Type:** Personal learning project – all data is fictional
 
 ---
