@@ -2,7 +2,7 @@
 
 A hands-on project to model, configure and integrate a real laboratory workflow in an Electronic Lab Notebook (ELN), from requirements to data integration.
 
-**Status:**  In progress (started October 2026)
+**Status:** In progress (started October 2026)
 **Type:** Personal learning project – all data is fictional
 
 ---
@@ -31,6 +31,8 @@ This project builds the structure that makes that question answerable.
 | Tool | Use |
 |---|---|
 | [eLabFTW](https://www.elabftw.net) | Open-source ELN: experiments, resources, templates, audit trail |
+| Docker Compose | Running eLabFTW, MySQL and the reverse proxy as three containers |
+| [Caddy](https://caddyserver.com) | HTTPS reverse proxy in front of eLabFTW |
 | Python + eLabFTW REST API v2 | Importing instrument results into experiments *(planned)* |
 | [Benchling documentation](https://help.benchling.com) | Reference for the enterprise data model (registry, inventory, result schemas) |
 | draw.io | Architecture and data model diagrams *(planned)* |
@@ -38,6 +40,8 @@ This project builds the structure that makes that question answerable.
 ## Roadmap
 
 - [x] Explore eLabFTW: experiments vs. resources, linking, revision history
+- [x] Self-host eLabFTW 6 locally (Docker Compose, MySQL, Caddy HTTPS reverse proxy)
+- [ ] Set up the team, users and roles
 - [ ] Model the Simple Western workflow: resource types, experiment template, statuses
 - [ ] Data integrity review: audit trail and revisions mapped to ALCOA+ principles
 - [ ] Python integration: CSV instrument export → validation → eLabFTW via API
@@ -51,6 +55,7 @@ This project builds the structure that makes that question answerable.
 ```
 .
 ├── README.md            ← overview and learning log
+├── 00-infrastructure/   ← docker-compose.yml and Caddyfile (no secrets)
 ├── 01-exploration/      ← notes and screenshots from the first sessions
 ├── 02-data-model/       ← resource types, experiment template, statuses
 ├── 03-integration/      ← Python script, sample data, architecture diagram
@@ -77,6 +82,34 @@ Worked on the public eLabFTW demo instance.
 - Does eLabFTW keep a separate, field-level change log in addition to revisions?
 - How would these revision settings need to be configured to meet GxP data integrity expectations?
 - How can resource types be standardized with structured fields?
+
+### Session 2 – Self-hosting eLabFTW 6 (October 2026)
+
+Installed my own eLabFTW instance on a personal laptop, to get admin rights and API access that the public demo does not provide.
+
+**Architecture**
+
+```
+Browser ──HTTPS──► Caddy (reverse proxy) ──HTTP──► eLabFTW 6 (web app) ──► MySQL 8.4
+```
+
+Three containers orchestrated with Docker Compose, with persistent Docker volumes for the database and uploaded files. Configuration files are in `00-infrastructure/` (secrets removed).
+
+**Issues I diagnosed from the container logs**
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| Browser: connection closed | v6 requires a TLS certificate path in HTTPS mode | Run the app in HTTP mode behind a reverse proxy |
+| `[pool elabpool] user has not been defined` | Configuration written for v5; v6 runs as a non-root user | Added `user`, a `tmpfs` for `/run`, new uploads path and container port 8080 |
+| `can't create directory '/var/cache/elabftw/': Read-only file system` | v6 runs on a read-only filesystem | Added a writable `tmpfs` for the cache |
+| "eLabFTW works only in HTTPS" banner | The app refuses plain HTTP | Added Caddy as an HTTPS reverse proxy; it forwards `X-Forwarded-Proto: https` |
+
+**What I learned**
+
+- **Read the logs first.** Every blocking issue was stated explicitly in the container logs (`docker logs`). Guessing from the browser error alone would have been much slower.
+- **Major versions change deployment, not just features.** A configuration that worked for v5 broke in four places on v6. Checking the upgrade guide before installing would have saved time; this matters when planning a client upgrade.
+- **Security is built into the deployment.** eLabFTW 6 runs as a non-root user, on a read-only filesystem, and only over HTTPS. These are the controls an IT or QA team expects to see for a system that holds lab records.
+- **Test vs. production.** This local setup uses a self-signed certificate and fictional data. A production deployment (Linux server, certificate from a trusted authority, backups, monitoring) is a different scope.
 
 ---
 
