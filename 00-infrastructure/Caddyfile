@@ -1,0 +1,5 @@
+# Caddy : HTTPS local pour eLabFTW
+localhost {
+	tls internal
+	reverse_proxy elabftw:8080
+}
