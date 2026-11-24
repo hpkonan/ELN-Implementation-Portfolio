@@ -1,8 +1,8 @@
 # ELN Implementation Portfolio – Simple Western Workflow
 
-A hands-on project to model, configure and integrate a real laboratory workflow in an Electronic Lab Notebook (ELN), from requirements to data integration.
+A hands-on project to model, configure and integrate a real laboratory workflow in an Electronic Lab Notebook (ELN), from requirements to data integration, using the open-source ELN eLabFTW.
 
-**Status:** In progress (started October 2026)
+**Status:** 🚧 In progress (started October 2026)
 **Type:** Personal learning project – all data is fictional
 
 ---
@@ -11,13 +11,13 @@ A hands-on project to model, configure and integrate a real laboratory workflow 
 
 I am a PhD-trained life scientist with several years of experience supporting automated protein analysis platforms in biopharma and academic labs. I know the bench side of lab workflows well; this project is about the digital side: how a workflow is structured, captured and connected inside lab informatics systems.
 
-The goal is to go through the full cycle a Solution Consultant or Business Analyst would follow on an ELN project:
+The goal is to go through the full cycle a Solutions Architect, Solution Consultant or Business Analyst would follow on an ELN project:
 
 1. Understand the scientific workflow and the users' needs
 2. Model the data (samples, reagents, instruments, results)
 3. Configure the ELN (resources, templates, statuses)
 4. Integrate instrument data through an API
-5. Transpose the data model to an enterprise platform (Benchling-style)
+5. Plan the deployment in a real lab (hosting, backups, access, responsibilities)
 6. Document requirements, user stories and acceptance testing
 
 ## The scenario
@@ -31,22 +31,22 @@ This project builds the structure that makes that question answerable.
 | Tool | Use |
 |---|---|
 | [eLabFTW](https://www.elabftw.net) | Open-source ELN: experiments, resources, templates, audit trail |
-| Docker Compose | Running eLabFTW, MySQL and the reverse proxy as three containers |
+| Docker Compose | Running eLabFTW, MySQL and the reverse proxy as containers |
 | [Caddy](https://caddyserver.com) | HTTPS reverse proxy in front of eLabFTW |
+| draw.io | Data model (ERD) and architecture diagrams |
 | Python + eLabFTW REST API v2 | Importing instrument results into experiments *(planned)* |
-| [Benchling documentation](https://help.benchling.com) | Reference for the enterprise data model (registry, inventory, result schemas) |
-| draw.io | Architecture and data model diagrams *(planned)* |
 
 ## Roadmap
 
 - [x] Explore eLabFTW: experiments vs. resources, linking, revision history
 - [x] Self-host eLabFTW 6 locally (Docker Compose, MySQL, Caddy HTTPS reverse proxy)
 - [ ] Set up the team, users and roles
-- [ ] Model the Simple Western workflow: resource types, experiment template, statuses
+- [x] Design the conceptual data model (ERD in draw.io + relationship documentation)
+- [ ] Configure eLabFTW to match the data model: resource categories, templates, sample chain, Simple Western experiment template
+- [ ] Test traceability end to end: first run, technical rerun, traceability questions
 - [ ] Data integrity review: audit trail and revisions mapped to ALCOA+ principles
 - [ ] Python integration: CSV instrument export → validation → eLabFTW via API
-- [ ] Solution architecture diagram (including error handling and a Benchling variant)
-- [ ] Benchling-style data model for antibody characterization
+- [ ] Solution architecture diagrams: integration flow with error handling, optional n8n orchestration, lab deployment
 - [ ] Business analysis deliverables: discovery guide, user stories, UAT plan, build-vs-buy note
 - [ ] Demo video and final write-up
 
@@ -54,13 +54,14 @@ This project builds the structure that makes that question answerable.
 
 ```
 .
-├── README.md            ← overview and learning log
-├── 00-infrastructure/   ← docker-compose.yml and Caddyfile (no secrets)
-├── 01-exploration/      ← notes and screenshots from the first sessions
-├── 02-data-model/       ← resource types, experiment template, statuses
-├── 03-integration/      ← Python script, sample data, architecture diagram
-├── 04-benchling-model/  ← data model design note and diagram
-└── 05-business-analysis/← discovery guide, user stories, UAT plan
+├── README.md               ← overview and learning log
+├── 00-infrastructure/      ← docker-compose.yml and Caddyfile (no secrets)
+├── 01-exploration/         ← notes and screenshots from the first sessions
+├── 02-data-model/          ← ERD (draw.io + PNG) and relationship documentation
+├── 03-eln-configuration/   ← resource categories, templates, screenshots
+├── 04-integration/         ← Python script and sample data
+├── 05-architecture/        ← integration flow and lab deployment diagrams
+└── 06-business-analysis/   ← discovery guide, user stories, UAT plan
 ```
 
 ---
@@ -109,7 +110,31 @@ Three containers orchestrated with Docker Compose, with persistent Docker volume
 - **Read the logs first.** Every blocking issue was stated explicitly in the container logs (`docker logs`). Guessing from the browser error alone would have been much slower.
 - **Major versions change deployment, not just features.** A configuration that worked for v5 broke in four places on v6. Checking the upgrade guide before installing would have saved time; this matters when planning a client upgrade.
 - **Security is built into the deployment.** eLabFTW 6 runs as a non-root user, on a read-only filesystem, and only over HTTPS. These are the controls an IT or QA team expects to see for a system that holds lab records.
-- **Test vs. production.** This local setup uses a self-signed certificate and fictional data. A production deployment (Linux server, certificate from a trusted authority, backups, monitoring) is a different scope.
+- **Test vs. production.** This local setup uses a self-signed certificate and fictional data. A production deployment (server, certificate from a trusted authority, backups, monitoring) is a different scope.
+
+**Update – enabling an add-on.** I later enabled the optional OpenCloning add-on (molecular biology tools). It runs as a fourth container on the internal network, with no port exposed to the host, and is switched on with two environment variables in the eLabFTW service. Not needed for a protein workflow, but a good exercise in how optional modules are deployed.
+
+### Session 3 – Designing the data model (November 2026)
+
+Designed a conceptual data model of the Simple Western workflow before touching the eLabFTW configuration, then reviewed it against how labs actually work.
+
+![Simple Western data model](02-data-model/eln-simple-western-data-model_V2.png)
+
+**Scope of version 2**
+
+- **12 entities in 5 families:** products (primary antibody, separation module, detection module), physical lots and instrument, sample chain (biological condition → extraction → sample preparation), experiment (one Jess run), results (one record per peak).
+- **13 relationships,** including many-to-many links between experiments and antibody or detection module lots, and two self-references: a rerun pointing to its original experiment, and a normalized result pointing to its housekeeping reference peak.
+- **12 documented design decisions** and the traceability questions the model must answer. Full documentation: [`02-data-model/data-model-relations_V2.md`](02-data-model/data-model-relations_V2.md).
+
+**What I learned**
+
+- **Model the lab, not the tool.** Designing the model independently of eLabFTW made the gaps visible: the model can describe what happens in each capillary, but eLabFTW links records at experiment level. Documenting that gap is part of the deliverable.
+- **Three kinds of keys, three jobs.** The technical key (PK) is assigned by the database and never changes; links rely on it, so correcting a readable code never breaks traceability. The readable code (UK) is what people use, and it stays the same across systems, which is what makes a migration verifiable. The reference (FK) is the link itself.
+- **Reuse official identifiers.** Catalog numbers, vendor lot numbers and serial numbers serve as readable codes. They are already unique, already on the label, and there is nothing to invent.
+- **Simplicity is a design decision.** Version 1 had 16 entities and traced every lot down to the capillary. Reviewed against real practice (the plate layout lives in Compass, capillary numbers are in every export), version 2 keeps 12 entities and traces at run level. The trade-off is written down: in the rare run comparing two lots of the same antibody, the plate layout tells which lot was in which capillary.
+- **Only capture what the lab uses.** Fields such as lot status or remaining quantity were removed where nobody would maintain them. A field nobody fills in becomes a source of false information.
+
+**Next step:** align the eLabFTW configuration with this model (resource categories, templates, sample chain, experiment template), then test it with a first run and a technical rerun.
 
 ---
 
