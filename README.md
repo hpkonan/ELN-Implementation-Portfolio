@@ -2,7 +2,7 @@
 
 A hands-on project to model, configure and integrate a real laboratory workflow in an Electronic Lab Notebook (ELN), from requirements to data integration, using the open-source ELN eLabFTW.
 
-**Status:** In progress
+**Status:** In progress (started October 2026)
 **Type:** Personal learning project – all data is fictional
 
 ---
@@ -40,9 +40,9 @@ This project builds the structure that makes that question answerable.
 
 - [x] Explore eLabFTW: experiments vs. resources, linking, revision history
 - [x] Self-host eLabFTW 6 locally (Docker Compose, MySQL, Caddy HTTPS reverse proxy)
-- [x] Set up the team, users and roles
+- [ ] Set up the team, users and roles
 - [x] Design the conceptual data model (ERD in draw.io + relationship documentation)
-- [x] Configure eLabFTW to match the data model: resource categories, templates, sample chain, Simple Western experiment template
+- [ ] Configure eLabFTW to match the data model: resource categories, templates, sample chain, Simple Western experiment template
 - [ ] Test traceability end to end: first run, technical rerun, traceability questions
 - [ ] Data integrity review: audit trail and revisions mapped to ALCOA+ principles
 - [ ] Python integration: CSV instrument export → validation → eLabFTW via API
@@ -123,8 +123,9 @@ Designed a conceptual data model of the Simple Western workflow before touching 
 **Scope of version 2**
 
 - **12 entities in 5 families:** products (primary antibody, separation module, detection module), physical lots and instrument, sample chain (biological condition → extraction → sample preparation), experiment (one Jess run), results (one record per peak).
-- **13 relationships,** including many-to-many links between experiments and antibody or detection module lots, and two self-references: a rerun pointing to its original experiment, and a normalized result pointing to its housekeeping reference peak.
-- **12 documented design decisions** and the traceability questions the model must answer. Full documentation: [`02-data-model/data-model-relations_V2.md`](02-data-model/data-model-relations_V2.md).
+- **12 relationships,** including many-to-many links between experiments and antibody or detection module lots, and a self-reference: a rerun points to its original experiment.
+- **Results mirror the instrument export:** one record per peak, with the Compass column names (Sample, Primary, Cap, MW, Area, Corr. Area, S/N, Channel…), so the integration script needs no translation table.
+- **13 documented design decisions** and the traceability questions the model must answer. Full documentation: [`02-data-model/data-model-relations_V2.md`](02-data-model/data-model-relations_V2.md).
 
 **What I learned**
 
@@ -132,6 +133,7 @@ Designed a conceptual data model of the Simple Western workflow before touching 
 - **Three kinds of keys, three jobs.** The technical key (PK) is assigned by the database and never changes; links rely on it, so correcting a readable code never breaks traceability. The readable code (UK) is what people use, and it stays the same across systems, which is what makes a migration verifiable. The reference (FK) is the link itself.
 - **Reuse official identifiers.** Catalog numbers, vendor lot numbers and serial numbers serve as readable codes. They are already unique, already on the label, and there is nothing to invent.
 - **Simplicity is a design decision.** Version 1 had 16 entities and traced every lot down to the capillary. Reviewed against real practice (the plate layout lives in Compass, capillary numbers are in every export), version 2 keeps 12 entities and traces at run level. The trade-off is written down: in the rare run comparing two lots of the same antibody, the plate layout tells which lot was in which capillary.
+- **Run settings are attributes, not entities.** Antibody diluent, protocol changes and normalization describe one run. They are fields of the experiment; the attached Compass file (or the Excel workbook, when normalization is calculated outside Compass) holds the detail.
 - **Only capture what the lab uses.** Fields such as lot status or remaining quantity were removed where nobody would maintain them. A field nobody fills in becomes a source of false information.
 
 **Next step:** align the eLabFTW configuration with this model (resource categories, templates, sample chain, experiment template), then test it with a first run and a technical rerun.
