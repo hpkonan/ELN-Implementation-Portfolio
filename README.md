@@ -40,9 +40,9 @@ This project builds the structure that makes that question answerable.
 
 - [x] Explore eLabFTW: experiments vs. resources, linking, revision history
 - [x] Self-host eLabFTW 6 locally (Docker Compose, MySQL, Caddy HTTPS reverse proxy)
-- [ ] Set up the team, users and roles
+- [x] Set up the team, users and roles
 - [x] Design the conceptual data model (ERD in draw.io + relationship documentation)
-- [ ] Configure eLabFTW to match the data model: resource categories, templates, sample chain, Simple Western experiment template
+- [x] Configure eLabFTW to match the data model: resource categories, templates, sample chain, Simple Western experiment template
 - [ ] Test traceability end to end: first run, technical rerun, traceability questions
 - [ ] Data integrity review: audit trail and revisions mapped to ALCOA+ principles
 - [ ] Python integration: CSV instrument export → validation → eLabFTW via API
